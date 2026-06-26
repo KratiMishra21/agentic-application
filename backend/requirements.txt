@@ -1,0 +1,14 @@
+pypdf
+chromadb
+groq
+supabase
+python-dotenv
+fastapi
+uvicorn
+twilio
+elevenlabs
+openai-whisper
+pydub
+gtts
+apscheduler
+pytz
