@@ -1,36 +1,43 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# HireAI — Agentic HR Screening System
 
-## Getting Started
+An end-to-end AI-powered recruitment platform that automates candidate screening, resume shortlisting, and initial HR interviews using agentic AI.
 
-First, run the development server:
+## What it does
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+- Candidates upload resumes through a web portal
+- HR posts job descriptions, keywords, and salary budget
+- AI matches resumes to JD using RAG pipeline and vector embeddings
+- Shortlisted candidates receive automated AI phone calls at their preferred time
+- AI conducts salary negotiation and HR screening questions
+- Generates structured interview summaries for HR review
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Tech Stack
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+**Frontend:** Next.js 14, Tailwind CSS, shadcn/ui  
+**Backend:** FastAPI, Python  
+**AI/ML:** Groq (Llama 3.1 70B), Whisper (STT), Google TTS, ChromaDB, Sentence Transformers  
+**RAG Pipeline:** PDF parsing, vector embeddings, cosine similarity scoring  
+**Telephony:** Twilio Voice API  
+**Database:** Supabase (PostgreSQL)  
+**Scheduling:** APScheduler  
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Key ML Concepts
 
-## Learn More
+- Retrieval Augmented Generation (RAG) for resume-JD matching
+- Vector embeddings with section-weighted similarity scoring
+- Agentic decision trees for automated conversation flow
+- Real-time speech-to-text transcription
+- LLM-powered structured summary generation
 
-To learn more about Next.js, take a look at the following resources:
+## Architecture
+Candidate Portal (Next.js) → Resume Upload → RAG Pipeline
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+HR Portal (Next.js) → JD Input → Vector Store
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+FastAPI Backend → Scheduler → Twilio Call → AI Conversation → Summary → HR Dashboard
 
-## Deploy on Vercel
+## Setup
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+See `backend/requirements.txt` for Python dependencies and `package.json` for Node dependencies.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Requires: Supabase, Groq API, Twilio, and ngrok for local development.
