@@ -193,12 +193,24 @@ export default function PostJobPage() {
               const done = index + 1 < step;
               return (
                 <div
-                  key={label}
-                  className={`rounded-2xl border p-4 text-sm transition ${active ? 'border-primary bg-primary/10' : done ? 'border-emerald-200 bg-emerald-50' : 'border-border bg-muted/60'}`}
-                >
-                  <p className="font-semibold text-slate-900">Step {index + 1}</p>
-                  <p className="text-slate-600">{label}</p>
-                </div>
+  key={label}
+  className={`rounded-2xl border p-4 text-sm transition ${
+    active
+      ? 'border-blue-400 bg-gradient-to-br from-blue-50 to-indigo-50 shadow-sm'
+      : done
+      ? 'border-emerald-300 bg-gradient-to-br from-emerald-50 to-teal-50'
+      : 'border-border bg-muted/60'
+  }`}
+>
+  <div className="flex items-center gap-2">
+    <span className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold ${
+      active ? 'bg-blue-600 text-white' : done ? 'bg-emerald-500 text-white' : 'bg-slate-300 text-slate-600'
+    }`}>
+      {done ? '✓' : index + 1}
+    </span>
+    <p className="font-semibold text-slate-900">{label}</p>
+  </div>
+</div>
               );
             })}
           </div>

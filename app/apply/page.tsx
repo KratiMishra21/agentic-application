@@ -53,35 +53,20 @@ export default function ApplyPage() {
 
   useEffect(() => {
     let isMounted = true;
-
     const loadJobs = async () => {
       try {
         const response = await fetch('/api/jobs');
         const data = await response.json();
-
-        if (!response.ok) {
-          throw new Error(data?.error || 'Unable to load jobs right now.');
-        }
-
-        if (isMounted) {
-          setJobs(data.jobs || []);
-        }
+        if (!response.ok) throw new Error(data?.error || 'Unable to load jobs right now.');
+        if (isMounted) setJobs(data.jobs || []);
       } catch (error) {
-        if (isMounted) {
-          setSubmitError(error instanceof Error ? error.message : 'Unable to load jobs right now.');
-        }
+        if (isMounted) setSubmitError(error instanceof Error ? error.message : 'Unable to load jobs right now.');
       } finally {
-        if (isMounted) {
-          setLoadingJobs(false);
-        }
+        if (isMounted) setLoadingJobs(false);
       }
     };
-
     loadJobs();
-
-    return () => {
-      isMounted = false;
-    };
+    return () => { isMounted = false; };
   }, []);
 
   const selectedJobLabel = useMemo(() => {
@@ -90,65 +75,45 @@ export default function ApplyPage() {
 
   const validateField = (name: string, value: string) => {
     switch (name) {
-      case 'fullName':
-        return value.trim().length < 2 ? 'Full name is required.' : '';
+      case 'fullName': return value.trim().length < 2 ? 'Full name is required.' : '';
       case 'email':
         if (!value.trim()) return 'Email address is required.';
         return emailRegex.test(value.trim()) ? '' : 'Enter a valid email address.';
       case 'phone':
         if (!value.trim()) return 'Phone number is required.';
         return indianPhoneRegex.test(value.trim()) ? '' : 'Use an Indian phone number, e.g. +91 98765 43210.';
-      case 'jobId':
-        return value ? '' : 'Please choose a job opening.';
-      case 'preferredCallDate':
-        return value ? '' : 'Preferred call date is required.';
-      case 'preferredCallTime':
-        return value ? '' : 'Preferred call time is required.';
-      default:
-        return '';
+      case 'jobId': return value ? '' : 'Please choose a job opening.';
+      case 'preferredCallDate': return value ? '' : 'Preferred call date is required.';
+      case 'preferredCallTime': return value ? '' : 'Preferred call time is required.';
+      default: return '';
     }
   };
 
   const validateResume = (file: File | null) => {
     if (!file) return 'Please upload your resume in PDF format.';
-    if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
-      return 'Only PDF files are accepted.';
-    }
+    if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) return 'Only PDF files are accepted.';
     return '';
   };
 
   const handleChange = (event: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = event.target;
-
     setFormValues((prev) => ({ ...prev, [name]: value }));
     setFormErrors((prev) => ({ ...prev, [name]: validateField(name, value) }));
-    if (name === 'jobId') {
-      setFormErrors((prev) => ({ ...prev, jobId: value ? '' : 'Please choose a job opening.' }));
-    }
   };
 
   const handleFile = (file: File | undefined) => {
     if (!file) return;
-
     const resumeError = validateResume(file);
+    if (resumeError) { setFormErrors((prev) => ({ ...prev, resume: resumeError })); setResumeFile(null); return; }
     setResumeFile(file);
-    setFormErrors((prev) => ({
-      ...prev,
-      resume: resumeError,
-    }));
-
-    if (resumeError) {
-      setResumeFile(null);
-    }
+    setFormErrors((prev) => ({ ...prev, resume: '' }));
   };
 
   const handleDrop = (event: DragEvent<HTMLLabelElement>) => {
     event.preventDefault();
     event.stopPropagation();
     setDragActive(false);
-
-    const droppedFile = event.dataTransfer.files?.[0];
-    handleFile(droppedFile);
+    handleFile(event.dataTransfer.files?.[0]);
   };
 
   const validateForm = () => {
@@ -161,7 +126,6 @@ export default function ApplyPage() {
       preferredCallTime: validateField('preferredCallTime', formValues.preferredCallTime),
       resume: validateResume(resumeFile),
     };
-
     setFormErrors(nextErrors);
     return !Object.values(nextErrors).some(Boolean);
   };
@@ -169,13 +133,8 @@ export default function ApplyPage() {
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
     setSubmitError('');
-
-    if (!validateForm()) {
-      return;
-    }
-
+    if (!validateForm()) return;
     setSubmitting(true);
-
     try {
       const formData = new FormData();
       formData.append('name', formValues.fullName.trim());
@@ -184,42 +143,33 @@ export default function ApplyPage() {
       formData.append('job_id', formValues.jobId);
       formData.append('preferred_call_date', formValues.preferredCallDate);
       formData.append('preferred_call_time', formValues.preferredCallTime);
-      if (resumeFile) {
-        formData.append('resume', resumeFile, resumeFile.name);
-      }
-
-      const response = await fetch('/api/candidates', {
-        method: 'POST',
-        body: formData,
-      });
-
+      if (resumeFile) formData.append('resume', resumeFile, resumeFile.name);
+      const response = await fetch('/api/candidates', { method: 'POST', body: formData });
       const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data?.error || 'Something went wrong while submitting your application.');
-      }
-
+      if (!response.ok) throw new Error(data?.error || 'Something went wrong while submitting your application.');
       setIsSuccess(true);
     } catch (error) {
-      setSubmitError(error instanceof Error ? error.message : 'Something went wrong while submitting your application.');
+      setSubmitError(error instanceof Error ? error.message : 'Something went wrong.');
     } finally {
       setSubmitting(false);
     }
   };
 
+  const inputClass = "w-full rounded-2xl border border-border bg-card px-4 py-3 text-foreground shadow-sm outline-none transition placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/20";
+
   if (isSuccess) {
     return (
       <main className="flex min-h-[calc(100vh-80px)] items-center justify-center px-4 py-12 sm:px-6 lg:px-8">
-        <Card className="w-full max-w-xl border border-emerald-200 bg-white shadow-[0_18px_45px_-28px_rgba(15,23,42,0.35)]">
+        <Card className="w-full max-w-xl border border-emerald-500/30 bg-card shadow-lg">
           <CardContent className="space-y-6 p-8 text-center sm:p-10">
-            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-500">
               <CheckCircle2 className="h-8 w-8" />
             </div>
             <div className="space-y-2">
-              <h1 className="text-2xl font-semibold text-slate-900">Application submitted successfully.</h1>
-              <p className="text-slate-600">We will be in touch soon. Your application has been received.</p>
+              <h1 className="text-2xl font-semibold text-foreground">Application submitted successfully.</h1>
+              <p className="text-muted-foreground">We will be in touch soon. Your application has been received.</p>
             </div>
-            <Button asChild className="w-full rounded-full bg-primary text-primary-foreground hover:bg-primary/90 sm:w-auto">
+            <Button asChild className="w-full rounded-full bg-gradient-to-r from-blue-600 to-cyan-500 text-white border-0 sm:w-auto">
               <a href="/">Back to homepage</a>
             </Button>
           </CardContent>
@@ -230,80 +180,51 @@ export default function ApplyPage() {
 
   return (
     <main className="flex min-h-[calc(100vh-80px)] items-center justify-center px-4 py-12 sm:px-6 lg:px-8">
-      <Card className="w-full max-w-3xl border border-border/80 bg-white shadow-[0_18px_45px_-28px_rgba(15,23,42,0.35)]">
-        <CardHeader className="space-y-3 border-b border-border/70 p-6 sm:p-8">
-          <p className="text-sm font-semibold uppercase tracking-[0.25em] text-primary">Candidate application</p>
+      <Card className="w-full max-w-3xl border border-border bg-card shadow-lg">
+        <CardHeader className="space-y-3 border-b border-border p-6 sm:p-8">
+          <div className="flex items-center gap-2">
+            <span className="rounded-full bg-gradient-to-r from-blue-600 to-purple-600 px-3 py-1 text-xs font-bold text-white uppercase tracking-widest">
+              Now Hiring
+            </span>
+          </div>
           <div className="space-y-2">
-            <CardTitle className="text-2xl font-semibold text-slate-900 sm:text-3xl">Apply for a Position</CardTitle>
-            <CardDescription className="text-slate-600">Share your details, choose a role, and upload your resume to get started.</CardDescription>
+            <CardTitle className="text-2xl font-semibold text-foreground sm:text-3xl">Apply for a Position</CardTitle>
+            <CardDescription className="text-muted-foreground">Share your details, choose a role, and upload your resume. Our AI will be in touch.</CardDescription>
           </div>
         </CardHeader>
 
         <CardContent className="p-6 sm:p-8">
           <form onSubmit={handleSubmit} className="space-y-6" noValidate>
-            {submitError ? (
-              <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700 shadow-sm">
+            {submitError && (
+              <div className="rounded-2xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-600 dark:text-red-400">
                 {submitError}
               </div>
-            ) : null}
+            )}
 
             <div className="grid gap-6 md:grid-cols-2">
+
               <div className="space-y-2 md:col-span-2">
-                <label htmlFor="fullName" className="text-sm font-medium text-slate-700">Full Name</label>
-                <input
-                  id="fullName"
-                  name="fullName"
-                  type="text"
-                  value={formValues.fullName}
-                  onChange={handleChange}
-                  placeholder="Alex Kumar"
-                  className="w-full rounded-2xl border border-border bg-white px-4 py-3 text-slate-900 shadow-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
-                  aria-invalid={Boolean(formErrors.fullName)}
-                />
-                {formErrors.fullName ? <p className="text-sm text-red-600">{formErrors.fullName}</p> : null}
+                <label className="text-sm font-medium text-foreground">Full Name</label>
+                <input name="fullName" type="text" value={formValues.fullName} onChange={handleChange} placeholder="Alex Kumar" className={inputClass} />
+                {formErrors.fullName && <p className="text-sm text-red-500">{formErrors.fullName}</p>}
               </div>
 
               <div className="space-y-2 md:col-span-2">
-                <label htmlFor="email" className="text-sm font-medium text-slate-700">Email Address</label>
-                <input
-                  id="email"
-                  name="email"
-                  type="email"
-                  value={formValues.email}
-                  onChange={handleChange}
-                  placeholder="alex@example.com"
-                  className="w-full rounded-2xl border border-border bg-white px-4 py-3 text-slate-900 shadow-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
-                  aria-invalid={Boolean(formErrors.email)}
-                />
-                {formErrors.email ? <p className="text-sm text-red-600">{formErrors.email}</p> : null}
+                <label className="text-sm font-medium text-foreground">Email Address</label>
+                <input name="email" type="email" value={formValues.email} onChange={handleChange} placeholder="alex@example.com" className={inputClass} />
+                {formErrors.email && <p className="text-sm text-red-500">{formErrors.email}</p>}
               </div>
 
               <div className="space-y-2 md:col-span-2">
-                <label htmlFor="phone" className="text-sm font-medium text-slate-700">Phone Number</label>
-                <input
-                  id="phone"
-                  name="phone"
-                  type="tel"
-                  value={formValues.phone}
-                  onChange={handleChange}
-                  placeholder="+91 98765 43210"
-                  className="w-full rounded-2xl border border-border bg-white px-4 py-3 text-slate-900 shadow-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
-                  aria-invalid={Boolean(formErrors.phone)}
-                />
-                <p className="text-xs text-slate-500">Indian format: +91 98765 43210</p>
-                {formErrors.phone ? <p className="text-sm text-red-600">{formErrors.phone}</p> : null}
+                <label className="text-sm font-medium text-foreground">Phone Number</label>
+                <input name="phone" type="tel" value={formValues.phone} onChange={handleChange} placeholder="+91 98765 43210" className={inputClass} />
+                <p className="text-xs text-muted-foreground">Indian format: +91 98765 43210</p>
+                {formErrors.phone && <p className="text-sm text-red-500">{formErrors.phone}</p>}
               </div>
 
               <div className="space-y-2 md:col-span-2">
-                <label htmlFor="jobId" className="text-sm font-medium text-slate-700">Select Job</label>
-                <select
-                  id="jobId"
-                  name="jobId"
-                  value={formValues.jobId}
-                  onChange={handleChange}
-                  className="w-full rounded-2xl border border-border bg-white px-4 py-3 text-slate-900 shadow-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
-                  aria-invalid={Boolean(formErrors.jobId)}
-                >
+                <label className="text-sm font-medium text-foreground">Select Job</label>
+                <select name="jobId" value={formValues.jobId} onChange={handleChange} className={inputClass}>
                   <option value="">Select a role</option>
                   {jobs.map((job) => (
                     <option key={job.id} value={job.id}>
@@ -311,27 +232,18 @@ export default function ApplyPage() {
                     </option>
                   ))}
                 </select>
-                {loadingJobs ? <p className="text-sm text-slate-500">Loading available jobs…</p> : null}
-                {formErrors.jobId ? <p className="text-sm text-red-600">{formErrors.jobId}</p> : null}
+                {loadingJobs && <p className="text-sm text-muted-foreground">Loading available jobs…</p>}
+                {formErrors.jobId && <p className="text-sm text-red-500">{formErrors.jobId}</p>}
               </div>
 
               <div className="space-y-2 md:col-span-2">
-                <label htmlFor="preferredCallDate" className="text-sm font-medium text-slate-700">Preferred Call Date</label>
-                <input
-                  id="preferredCallDate"
-                  name="preferredCallDate"
-                  type="date"
-                  value={formValues.preferredCallDate}
-                  onChange={handleChange}
-                  className="w-full rounded-2xl border border-border bg-white px-4 py-3 text-slate-900 shadow-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
-                  aria-invalid={Boolean(formErrors.preferredCallDate)}
-                  required
-                />
-                {formErrors.preferredCallDate ? <p className="text-sm text-red-600">{formErrors.preferredCallDate}</p> : null}
+                <label className="text-sm font-medium text-foreground">Preferred Call Date</label>
+                <input name="preferredCallDate" type="date" value={formValues.preferredCallDate} onChange={handleChange} className={inputClass} />
+                {formErrors.preferredCallDate && <p className="text-sm text-red-500">{formErrors.preferredCallDate}</p>}
               </div>
 
               <div className="space-y-2 md:col-span-2">
-                <label className="text-sm font-medium text-slate-700">Preferred Call Time</label>
+                <label className="text-sm font-medium text-foreground">Preferred Call Time</label>
                 <div className="grid gap-3 sm:grid-cols-3">
                   {[
                     { value: 'morning', label: 'Morning', sub: '9 AM – 12 PM' },
@@ -343,12 +255,12 @@ export default function ApplyPage() {
                       type="button"
                       onClick={() => {
                         setFormValues((prev) => ({ ...prev, preferredCallTime: slot.value }));
-                        setFormErrors((prev) => ({ ...prev, preferredCallTime: validateField('preferredCallTime', slot.value) }));
+                        setFormErrors((prev) => ({ ...prev, preferredCallTime: '' }));
                       }}
                       className={`rounded-2xl border p-3 text-center transition-colors ${
                         formValues.preferredCallTime === slot.value
-                          ? 'border-primary bg-primary/5 text-primary'
-                          : 'border-border bg-white text-slate-600 hover:border-primary/60 hover:bg-primary/5'
+                          ? 'border-primary bg-primary/10 text-primary'
+                          : 'border-border bg-card text-muted-foreground hover:border-primary/60 hover:bg-primary/5'
                       }`}
                     >
                       <div className="font-medium">{slot.label}</div>
@@ -356,58 +268,50 @@ export default function ApplyPage() {
                     </button>
                   ))}
                 </div>
-                {formErrors.preferredCallTime ? <p className="text-sm text-red-600">{formErrors.preferredCallTime}</p> : null}
+                {formErrors.preferredCallTime && <p className="text-sm text-red-500">{formErrors.preferredCallTime}</p>}
               </div>
 
               <div className="space-y-2 md:col-span-2">
-                <label className="text-sm font-medium text-slate-700">Resume Upload</label>
+                <label className="text-sm font-medium text-foreground">Resume Upload</label>
                 <label
-                  onDragOver={(event) => {
-                    event.preventDefault();
-                    setDragActive(true);
-                  }}
+                  onDragOver={(e) => { e.preventDefault(); setDragActive(true); }}
                   onDragLeave={() => setDragActive(false)}
                   onDrop={handleDrop}
-                  className={`flex cursor-pointer flex-col items-center justify-center rounded-3xl border border-dashed px-6 py-8 text-center transition ${dragActive ? 'border-primary bg-primary/5' : 'border-border bg-white hover:border-primary/60 hover:bg-primary/5'}`}
+                  className={`flex cursor-pointer flex-col items-center justify-center rounded-3xl border border-dashed px-6 py-8 text-center transition ${
+                    dragActive ? 'border-primary bg-primary/5' : 'border-border bg-card hover:border-primary/60 hover:bg-primary/5'
+                  }`}
                 >
-                  <input
-                    type="file"
-                    accept=".pdf,application/pdf"
-                    className="hidden"
-                    onChange={(event) => handleFile(event.target.files?.[0])}
-                  />
+                  <input type="file" accept=".pdf,application/pdf" className="hidden" onChange={(e) => handleFile(e.target.files?.[0])} />
                   <UploadCloud className="h-8 w-8 text-primary" />
-                  <p className="mt-3 text-sm font-semibold text-slate-900">Drag and drop your PDF or click to browse</p>
-                  <p className="mt-1 text-xs text-slate-500">PDF files only</p>
+                  <p className="mt-3 text-sm font-semibold text-foreground">Drag and drop your PDF or click to browse</p>
+                  <p className="mt-1 text-xs text-muted-foreground">PDF files only</p>
                 </label>
-                {resumeFile ? (
-                  <div className="flex items-center gap-2 rounded-2xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
+                {resumeFile && (
+                  <div className="flex items-center gap-2 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-600 dark:text-emerald-400">
                     <FileText className="h-4 w-4" />
                     {resumeFile.name}
                   </div>
-                ) : null}
-                {formErrors.resume ? <p className="text-sm text-red-600">{formErrors.resume}</p> : null}
+                )}
+                {formErrors.resume && <p className="text-sm text-red-500">{formErrors.resume}</p>}
               </div>
             </div>
 
-            <div className="rounded-3xl border border-border/80 bg-muted/60 p-4 text-sm text-slate-600">
-              <p className="font-semibold text-slate-900">Applying for:</p>
+            <div className="rounded-3xl border border-border bg-muted/40 p-4 text-sm text-muted-foreground">
+              <p className="font-semibold text-foreground">Applying for:</p>
               <p>{selectedJobLabel}</p>
             </div>
 
             <Button
               type="submit"
-              className="w-full rounded-full bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground shadow-sm shadow-primary/30 hover:bg-primary/90"
               disabled={submitting}
+              className="w-full rounded-full bg-gradient-to-r from-blue-600 to-cyan-500 text-white border-0 hover:from-blue-700 hover:to-cyan-600 py-3"
             >
               {submitting ? (
-                <span className="inline-flex items-center justify-center gap-2">
+                <span className="inline-flex items-center gap-2">
                   <Loader2 className="h-4 w-4 animate-spin" />
                   Submitting…
                 </span>
-              ) : (
-                'Submit Application'
-              )}
+              ) : 'Submit Application'}
             </Button>
           </form>
         </CardContent>
