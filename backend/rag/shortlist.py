@@ -3,7 +3,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 import json
 from config import groq_client
 
-GROQ_MODEL = "llama-3.3-70b-versatile"
+GROQ_MODEL = "qwen/qwen3.6-27b"
 
 SIMILARITY_THRESHOLD = 0.35
 
@@ -54,17 +54,27 @@ def get_llm_verdict(jd_text: str, resume_text: str, similarity_score: float, thr
                 {"role": "system", "content": "You are a precise JSON-only response generator."},
                 {"role": "user", "content": prompt},
             ],
-            temperature=0.2,
-            max_tokens=400,
+            temperature=0,
+            max_tokens=1024,
+            extra_body={"reasoning_effort": "none"}
         )
 
         content = response.choices[0].message.content.strip()
+        print(f"[DEBUG] Raw LLM response: {repr(content)}")
+
+        # Strip Qwen thinking tags <think>...</think>
+        import re
+        content = re.sub(r'<think>.*?</think>', '', content, flags=re.DOTALL).strip()
 
         # Strip markdown fences if present
         if content.startswith("```"):
-            content = content.strip("`")
-            if content.startswith("json"):
-                content = content[4:].strip()
+            content = re.sub(r'^```(?:json)?\s*', '', content)
+            content = re.sub(r'\s*```$', '', content).strip()
+
+        # Extract JSON object if extra text surrounds it
+        json_match = re.search(r'\{.*\}', content, re.DOTALL)
+        if json_match:
+            content = json_match.group(0)
 
         verdict = json.loads(content)
 

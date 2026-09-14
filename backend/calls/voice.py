@@ -36,7 +36,7 @@ STATIC_SCRIPTS = {
     ),
     "salary_question": (
         "Thank you for agreeing to proceed. "
-        "Could you please tell me your expected monthly salary in rupees?"
+        "Could you please tell me your expected annual salary in lakhs?"
     ),
     "salary_over_budget": (
         "Thank you for sharing that. "

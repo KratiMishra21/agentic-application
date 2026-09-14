@@ -4,7 +4,7 @@ from apscheduler.schedulers.background import BackgroundScheduler
 import pytz
 from fastapi.staticfiles import StaticFiles
 import sys, os
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from calls.call_handler import (
     initiate_call,
@@ -182,8 +182,8 @@ async def call_webhook(request: Request):
     return await handle_webhook(request)
 
 @app.post("/call/recording")
-async def call_recording(request: Request):
-    return await handle_recording(request)
+async def call_recording(request: Request, background_tasks: BackgroundTasks):
+    return await handle_recording(request, background_tasks)
 
 @app.post("/call/status")
 async def call_status(request: Request):

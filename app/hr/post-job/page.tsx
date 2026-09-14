@@ -298,7 +298,7 @@ export default function PostJobPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-slate-700">Salary Budget (Monthly CTC in INR)</label>
+                  <label className="text-sm font-medium text-slate-700">Annual Budget (in ₹)</label>
                   <div className="flex items-center gap-2">
                     <input
                       type="number"

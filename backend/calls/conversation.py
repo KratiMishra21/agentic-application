@@ -107,11 +107,12 @@ def process_response(call_sid: str, transcribed_text: str) -> dict:
         salary = _extract_salary(transcribed_text)
         session["salary_answer"] = salary
         session["transcript"].append({
-            "question": "What is your expected monthly salary?",
+            "question": "What is your expected annual salary in lakhs?",
             "answer": transcribed_text
         })
 
         budget = session["budget"]
+        print(f"[DEBUG] salary={salary} type={type(salary)} | budget={budget} type={type(budget)}")
 
         if salary and budget and salary <= budget:
             # Salary within budget — proceed to HR questions
@@ -134,7 +135,7 @@ def process_response(call_sid: str, transcribed_text: str) -> dict:
             # Could not extract salary — ask again
             return {
                 "action": "dynamic",
-                "dynamic_text": "I'm sorry, I didn't catch that. Could you please tell me your expected monthly salary as a number in rupees?",
+                "dynamic_text": "I'm sorry, I didn't catch that. Could you please tell me your expected annual salary in lakhs?",
                 "state": "salary"
             }
 
@@ -227,7 +228,7 @@ def _extract_salary(text: str) -> int | None:
     """
     Extract salary number from candidate's response.
     Handles: '50000', '50k', '5 lakhs', '5 lakh', '1.5 lakh'
-    Returns monthly salary as integer or None.
+    Returns annual salary as integer or None.
     """
     text = text.lower().replace(",", "")
 
@@ -235,9 +236,7 @@ def _extract_salary(text: str) -> int | None:
     lakh_match = re.search(r"(\d+\.?\d*)\s*lakh", text)
     if lakh_match:
         val = float(lakh_match.group(1))
-        # Assume annual if > 5 lakh, convert to monthly
-        annual = val * 100000
-        return int(annual / 12)
+        return int(val * 100000)
 
     # Match 'k' suffix
     k_match = re.search(r"(\d+)\s*k", text)
@@ -252,10 +251,10 @@ def _extract_salary(text: str) -> int | None:
     # Ask Groq to extract if regex fails
     try:
         response = groq_client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
+            model="qwen/qwen3.6-27b",
             messages=[{
                 "role": "user",
-                "content": f"Extract the monthly salary in INR as a plain integer from: '{text}'. Return only the number, nothing else. If you cannot find a number return 0."
+                "content": f"Extract the annual salary in INR as a plain integer from: '{text}'. Return only the number, nothing else. If you cannot find a number return 0."
             }],
             max_tokens=20,
             temperature=0,
@@ -273,36 +272,50 @@ def _generate_summary(session: dict) -> str:
         for item in session["transcript"]
     ])
 
-    prompt = f"""You are an HR assistant. Generate a structured interview summary.
+    prompt = f"""You are a senior HR interviewer writing a professional candidate evaluation report.
 
-Candidate: {session['candidate_name']}
-Job: {session['job_title']}
-Salary Expected: {session.get('salary_answer', 'Not provided')} per month
-Salary Within Budget: {session.get('salary_accepted', 'Unknown')}
+Candidate Name: {session['candidate_name']}
+Position Applied For: {session['job_title']}
+Annual Salary Expected: ₹{session.get('salary_answer', 'Not provided'):,}
+Salary Within Budget: {'Yes' if session.get('salary_accepted') else 'No'}
 
 Interview Transcript:
 {transcript_text}
 
-Write a structured summary with these sections:
-- Salary Expectation
-- Budget Alignment
-- Key Answers
-- Communication Quality
-- Overall Recommendation
+Write a detailed, professional candidate evaluation report with the following sections. Each section must be a well-written paragraph of 3-4 sentences. Do not use bullet points. Write in third person (refer to the candidate by name).
 
-Keep it concise and professional."""
+**Salary & Compensation Alignment**
+Discuss the candidate's salary expectation, whether it aligns with the allocated budget, and any negotiation context if applicable.
+
+**Interview Performance & Key Responses**
+Summarize how the candidate responded to each question. Highlight specific answers they gave, quoting or paraphrasing their actual responses from the transcript. Evaluate the depth and relevance of their answers.
+
+**Motivation & Career Trajectory**
+Assess the candidate's reason for leaving their current role, their stated career goals, and whether their ambitions align with what this position offers.
+
+**Communication & Professionalism**
+Evaluate the clarity, confidence, and professionalism of the candidate's communication throughout the interview. Note any standout moments or concerns.
+
+**Overall Recommendation**
+Provide a clear hiring recommendation with justification based on all of the above. State whether the candidate should be moved to the next round, put on hold, or rejected, and why.
+
+Write only the report. No preamble, no thinking tags, no meta-commentary. Output must be clean professional text only."""
 
     try:
         response = groq_client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
+            model="qwen/qwen3.6-27b",
             messages=[
                 {"role": "system", "content": "You are a professional HR assistant."},
                 {"role": "user", "content": prompt}
             ],
             max_tokens=600,
             temperature=0.3,
+            extra_body={"reasoning_effort": "none"}
         )
-        return response.choices[0].message.content.strip()
+        summary = response.choices[0].message.content.strip()
+        # Strip Qwen thinking tags
+        summary = re.sub(r'<think>.*?</think>', '', summary, flags=re.DOTALL).strip()
+        return summary
     except Exception as e:
         print(f"[conversation] Summary generation failed: {e}")
         return "Summary could not be generated."

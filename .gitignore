@@ -50,6 +50,12 @@ rag/venv/
 backend/.env
 backend/__pycache__/
 backend/calls/__pycache__/
+backend/asr_test_audio
+backend/eval_resumes
+backend/asr_results.csv
+backend/eval_results.csv
+backend/eval_results_v2.csv
+backend/ground_truth.csv
 backend/rag/__pycache__/
 __pycache__/
 

@@ -1,7 +1,8 @@
 import sys, os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
-from fastapi import Request
+import asyncio
+from fastapi import Request, BackgroundTasks
 from fastapi.responses import Response
 from twilio.rest import Client
 from twilio.twiml.voice_response import VoiceResponse, Play, Record, Pause
@@ -59,7 +60,7 @@ def initiate_call(candidate_id: str) -> dict:
             url=f"{NGROK_URL}/call/webhook?candidate_id={candidate_id}&job_id={candidate['job_id']}",
             status_callback=f"{NGROK_URL}/call/status",
             status_callback_method="POST",
-            status_callback_event=["completed", "no-answer", "busy", "failed"],
+            status_callback_event=["completed"],
         )
 
         # Update candidate status
@@ -110,7 +111,10 @@ async def handle_webhook(request: Request) -> Response:
 
 # ─── Step 3: Twilio recording callback ───
 
-async def handle_recording(request: Request) -> Response:
+async def handle_recording(
+    request: Request,
+    background_tasks: BackgroundTasks
+) -> Response:
     """
     Twilio hits this after each recording with the audio URL.
     Transcribes, processes response, plays next audio.
@@ -134,8 +138,7 @@ async def handle_recording(request: Request) -> Response:
     # Transcribe what candidate said
     transcribed = ""
     if recording_url:
-        import time
-        time.sleep(1)  # small delay so Twilio finishes processing
+        await asyncio.sleep(1)  # small delay so Twilio finishes processing
         transcribed = transcribe_audio_url(recording_url)
 
     if not transcribed:
@@ -150,8 +153,8 @@ async def handle_recording(request: Request) -> Response:
         response.play(f"{NGROK_URL}/audio/calls/{action['audio_file']}.mp3")
         response.pause(length=1)
         response.hangup()
-        # Generate and save summary
-        finalize_call(call_sid)
+        # Generate and save summary in background
+        background_tasks.add_task(finalize_call, call_sid)
 
     elif action["action"] == "play_audio":
         response.play(f"{NGROK_URL}/audio/calls/{action['audio_file']}.mp3")
